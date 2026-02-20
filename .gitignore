@@ -1,0 +1,16 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+*.tfvars.json
+.terraform.lock.hcl
+
+# Node / frontend
+node_modules/
+dist/
+
+# OS / IDE
+.DS_Store
+.vscode/
