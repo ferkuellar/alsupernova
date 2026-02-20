@@ -1,0 +1,15 @@
+sequenceDiagram
+  participant C as Customer
+  participant API as API Gateway
+  participant O as Orders Lambda
+  participant D as DynamoDB Orders
+  participant E as EventBridge
+  participant Q as SQS Fulfillment
+
+  C->>API: POST /orders
+  API->>O: invoke
+  O->>D: PutItem(orderId, status=CREATED)
+  O->>E: PutEvents(OrderCreated)
+  E->>Q: enqueue fulfillment task
+  O-->>API: 201 Created (orderId)
+  API-->>C: orderId + status

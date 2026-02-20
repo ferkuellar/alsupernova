@@ -1,0 +1,19 @@
+flowchart LR
+  U[Customers Web/Mobile] --> CF[CloudFront]
+  CF --> S3[S3 Static Website]
+  CF --> APIGW[API Gateway HTTP API]
+  APIGW --> L1[Lambda: Catalog]
+  APIGW --> L2[Lambda: Cart]
+  APIGW --> L3[Lambda: Orders]
+
+  L1 --> DDB1[(DynamoDB: CatalogCache)]
+  L2 --> DDB2[(DynamoDB: Cart)]
+  L3 --> DDB3[(DynamoDB: Orders)]
+  L3 --> EB[EventBridge Bus]
+  EB --> SQS1[SQS: Fulfillment]
+  EB --> SQS2[SQS: Notifications]
+
+  L1 --> CW[CloudWatch Logs/Metrics]
+  L2 --> CW
+  L3 --> CW
+  APIGW --> CW
