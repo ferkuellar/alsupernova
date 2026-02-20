@@ -8,9 +8,9 @@
 
 ## Next
 
-- [ ] Terraform core: S3 + CloudFront (OAC)
-- [ ] Frontend: simple static page deployed to S3
-- [ ] Backend: API Gateway + 3 Lambdas (catalog/cart/orders)
-- [ ] DynamoDB tables (on-demand)
+- [X] Terraform core: S3 + CloudFront (OAC)
+- [X] Frontend: simple static page deployed to S3
+- [X] Backend: API Gateway + 3 Lambdas (catalog/cart/orders)
+- [X] DynamoDB tables (on-demand)
 - [ ] EventBridge + SQS (optional)
 - [ ] Observability: alarms + log retention
