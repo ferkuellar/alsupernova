@@ -1,0 +1,17 @@
+flowchart LR
+  Client[Client / Frontend] --> API[API Gateway HTTP API]
+  API --> Lc[Lambda Catalog]
+  API --> Lcart[Lambda Cart]
+  API --> Lord[Lambda Orders]
+
+  Lcart --> DCart[(DynamoDB Cart)]
+  Lord --> DOrd[(DynamoDB Orders)]
+
+  subgraph Observability
+    CW[CloudWatch Logs/Metrics]
+  end
+
+  API --> CW
+  Lc --> CW
+  Lcart --> CW
+  Lord --> CW
