@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./docs/alsuper01.png" alt="ALSUPERNOVA — AWS Omnichannel MVP" width="70%">
+</p>
+
 # ALSUPERNOVA 🛒⚡ (Retail Omnichannel MVP on AWS)
 
 **Role:** Head / Senior AWS Cloud Architect  
