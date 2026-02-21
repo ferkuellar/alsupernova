@@ -32,7 +32,7 @@ This repo includes **Terraform**, a **working end-to-end UI**, **API endpoints**
 - **Data:** DynamoDB **PAY_PER_REQUEST** (Cart + Orders) → near-zero idle cost
 - Designed to evolve into **event-driven** (fulfillment/notifications/analytics)
 
-📸 **Evidence (screenshots & proof):** [docs/evidence](./docs/evidence)
+[![Evidence](https://img.shields.io/badge/%F0%9F%93%B8%20Evidence-View%20Screenshots-blue?style=for-the-badge)](./docs/evidence)
 
 ---
 
