@@ -12,5 +12,6 @@
 - [X] Frontend: simple static page deployed to S3
 - [X] Backend: API Gateway + 3 Lambdas (catalog/cart/orders)
 - [X] DynamoDB tables (on-demand)
+- [X] Frontend integrated with backend (UI demo)
 - [ ] EventBridge + SQS (optional)
 - [ ] Observability: alarms + log retention

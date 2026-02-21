@@ -1,0 +1,6 @@
+flowchart LR
+  Browser[User Browser] --> CF[CloudFront]
+  CF --> S3[S3 Bucket: frontend]
+  Browser -->|fetch /catalog, /orders| API[API Gateway HTTP API]
+  API --> L[Lambda functions]
+  L --> DDB[(DynamoDB)]

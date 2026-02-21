@@ -5,16 +5,249 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ALSUPERNOVA</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 40px; }
-    .card { max-width: 720px; padding: 24px; border: 1px solid #ddd; border-radius: 14px; }
-    code { background: #f6f6f6; padding: 2px 6px; border-radius: 6px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 28px; background:#fafafa; }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card { background: #fff; padding: 18px; border: 1px solid #e5e5e5; border-radius: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    h1 { margin: 0 0 6px 0; }
+    small { color: #666; }
+    input, button, select { padding: 10px; border-radius: 10px; border: 1px solid #ddd; }
+    button { cursor: pointer; background: #111; color: #fff; border: 0; }
+    button.secondary { background: #444; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    pre { background: #0b0b0b; color: #e6e6e6; padding: 12px; border-radius: 12px; overflow:auto; font-size: 12px; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; background:#f1f1f1; border:1px solid #e6e6e6; font-size: 12px; }
+    .ok { background:#e9fff0; border-color:#c8f3d6; }
+    .bad { background:#ffecec; border-color:#ffd0d0; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>ALSUPERNOVA MVP</h1>
-    <p>Static site served by <code>S3</code> + <code>CloudFront (OAC)</code>.</p>
-    <p>Status: <strong>online</strong></p>
+  <div class="wrap">
+    <div class="card">
+      <h1>ALSUPERNOVA MVP</h1>
+      <small>Frontend: S3 + CloudFront (OAC) • Backend: API Gateway + Lambda + DynamoDB</small>
+      <div style="margin-top:12px" class="row">
+        <span class="pill" id="status-pill">API status: unknown</span>
+        <label style="display:flex; gap:8px; align-items:center;">
+          API Base URL
+          <input id="apiBase" style="min-width:420px" placeholder="https://xxxx.execute-api....amazonaws.com" />
+        </label>
+        <button class="secondary" id="btnSave">Save</button>
+        <button id="btnPing">Ping API</button>
+      </div>
+      <div style="margin-top:10px">
+        <small>Tip: pega aquí tu <code>api_base_url</code> de Terraform. Se guarda en localStorage.</small>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:16px">
+      <div class="card">
+        <h2>Catalog</h2>
+        <div class="row">
+          <button id="btnCatalog">Load Catalog</button>
+          <select id="skuSelect" disabled></select>
+          <input id="qty" type="number" min="1" value="1" style="width:90px" />
+          <button id="btnAddCart" disabled>Add to Cart</button>
+        </div>
+        <div style="margin-top:12px">
+          <small>UserId used for demo:</small> <span class="pill">fernando</span>
+        </div>
+        <h3 style="margin-top:16px">Response</h3>
+        <pre id="outCatalog">{}</pre>
+      </div>
+
+      <div class="card">
+        <h2>Orders</h2>
+        <div class="row">
+          <button id="btnCreateOrder" disabled>Create Order</button>
+          <input id="orderId" placeholder="orderId..." style="min-width:260px" />
+          <button id="btnGetOrder">Get Order</button>
+        </div>
+        <div style="margin-top:10px">
+          <small>StoreId used for demo:</small> <span class="pill">store-CHIH-01</span>
+        </div>
+        <h3 style="margin-top:16px">Response</h3>
+        <pre id="outOrders">{}</pre>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Runbook (demo)</h2>
+      <ul>
+        <li>1) Paste API Base URL → Save</li>
+        <li>2) Ping API (verifies connectivity/CORS)</li>
+        <li>3) Load Catalog</li>
+        <li>4) Add to Cart</li>
+        <li>5) Create Order</li>
+        <li>6) Copy orderId → Get Order</li>
+      </ul>
+    </div>
   </div>
+
+  <script>
+    const el = (id) => document.getElementById(id);
+    const statusPill = el("status-pill");
+
+    const apiInput = el("apiBase");
+    const btnSave = el("btnSave");
+    const btnPing = el("btnPing");
+
+    const btnCatalog = el("btnCatalog");
+    const skuSelect = el("skuSelect");
+    const qtyInput = el("qty");
+    const btnAddCart = el("btnAddCart");
+    const outCatalog = el("outCatalog");
+
+    const btnCreateOrder = el("btnCreateOrder");
+    const orderIdInput = el("orderId");
+    const btnGetOrder = el("btnGetOrder");
+    const outOrders = el("outOrders");
+
+    const USER_ID = "fernando";
+    const STORE_ID = "store-CHIH-01";
+    let catalogItems = [];
+
+    function setStatus(text, ok=null) {
+      statusPill.textContent = text;
+      statusPill.classList.remove("ok","bad");
+      if (ok === true) statusPill.classList.add("ok");
+      if (ok === false) statusPill.classList.add("bad");
+    }
+
+    function getApiBase() {
+      const v = apiInput.value.trim();
+      return v.endsWith("/") ? v.slice(0,-1) : v;
+    }
+
+    function saveApiBase() {
+      const v = getApiBase();
+      if (!v.startsWith("https://")) {
+        setStatus("API status: invalid URL (must start with https://)", false);
+        return;
+      }
+      localStorage.setItem("alsupernova_api_base", v);
+      setStatus("API status: saved (ping to verify)", null);
+    }
+
+    async function callApi(path, opts={}) {
+      const base = localStorage.getItem("alsupernova_api_base") || getApiBase();
+      if (!base) throw new Error("API base URL not set");
+      const url = base + path;
+
+      const res = await fetch(url, {
+        ...opts,
+        headers: {
+          "Content-Type": "application/json",
+          ...(opts.headers || {})
+        }
+      });
+
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+      if (!res.ok) {
+        const msg = data?.error || `HTTP ${res.status}`;
+        throw new Error(msg);
+      }
+      return data;
+    }
+
+    function pretty(obj) {
+      return JSON.stringify(obj, null, 2);
+    }
+
+    btnSave.addEventListener("click", () => saveApiBase());
+
+    // Load saved base on start
+    const saved = localStorage.getItem("alsupernova_api_base");
+    if (saved) apiInput.value = saved;
+
+    btnPing.addEventListener("click", async () => {
+      try {
+        setStatus("API status: pinging...", null);
+        // We use /catalog as ping endpoint
+        await callApi("/catalog");
+        setStatus("API status: reachable ✅", true);
+        btnCreateOrder.disabled = false;
+        btnCatalog.disabled = false;
+      } catch (e) {
+        setStatus("API status: unreachable ❌ (" + e.message + ")", false);
+      }
+    });
+
+    btnCatalog.addEventListener("click", async () => {
+      try {
+        outCatalog.textContent = "Loading...";
+        const data = await callApi("/catalog");
+        outCatalog.textContent = pretty(data);
+
+        catalogItems = data.items || [];
+        skuSelect.innerHTML = "";
+        catalogItems.forEach(i => {
+          const opt = document.createElement("option");
+          opt.value = i.sku;
+          opt.textContent = `${i.sku} — ${i.name} ($${i.price})`;
+          skuSelect.appendChild(opt);
+        });
+        skuSelect.disabled = catalogItems.length === 0;
+        btnAddCart.disabled = catalogItems.length === 0;
+      } catch (e) {
+        outCatalog.textContent = pretty({ error: e.message });
+      }
+    });
+
+    btnAddCart.addEventListener("click", async () => {
+      try {
+        const sku = skuSelect.value;
+        const qty = parseInt(qtyInput.value || "1", 10);
+        outCatalog.textContent = "Adding to cart...";
+        const data = await callApi("/cart/items", {
+          method: "POST",
+          body: JSON.stringify({ userId: USER_ID, sku, qty })
+        });
+        outCatalog.textContent = pretty(data);
+      } catch (e) {
+        outCatalog.textContent = pretty({ error: e.message });
+      }
+    });
+
+    btnCreateOrder.addEventListener("click", async () => {
+      try {
+        const items = [
+          { sku: "APL-001", qty: 2 },
+          { sku: "MLK-001", qty: 1 }
+        ];
+        outOrders.textContent = "Creating order...";
+        const data = await callApi("/orders", {
+          method: "POST",
+          body: JSON.stringify({ userId: USER_ID, storeId: STORE_ID, items })
+        });
+        outOrders.textContent = pretty(data);
+
+        const id = data?.order?.orderId;
+        if (id) orderIdInput.value = id;
+      } catch (e) {
+        outOrders.textContent = pretty({ error: e.message });
+      }
+    });
+
+    btnGetOrder.addEventListener("click", async () => {
+      try {
+        const id = orderIdInput.value.trim();
+        if (!id) {
+          outOrders.textContent = pretty({ error: "orderId is required" });
+          return;
+        }
+        outOrders.textContent = "Fetching order...";
+        const data = await callApi(`/orders/${id}`);
+        outOrders.textContent = pretty(data);
+      } catch (e) {
+        outOrders.textContent = pretty({ error: e.message });
+      }
+    });
+  </script>
 </body>
 </html>
