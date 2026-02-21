@@ -21,7 +21,10 @@ resource "aws_dynamodb_table" "cart" {
   }
 
   tags = {
-    Name = "${local.name}-Cart"
+    Project     = local.name
+    Environment = "dev"
+    Owner       = "Fernando"
+    CostCenter  = "Portfolio"
   }
 }
 
@@ -36,7 +39,10 @@ resource "aws_dynamodb_table" "orders" {
   }
 
   tags = {
-    Name = "${local.name}-Orders"
+    Project     = local.name
+    Environment = "dev"
+    Owner       = "Fernando"
+    CostCenter  = "Portfolio"
   }
 }
 
@@ -65,31 +71,67 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
 }
 
 # DynamoDB access (least-ish privilege for MVP)
-data "aws_iam_policy_document" "ddb_policy" {
+# data "aws_iam_policy_document" "ddb_policy" {
+#  statement {
+#    actions = [
+#      "dynamodb:PutItem",
+#      "dynamodb:GetItem",
+#      "dynamodb:UpdateItem",
+#      "dynamodb:DeleteItem",
+#      "dynamodb:Query",
+#      "dynamodb:Scan"
+#    ]
+#    resources = [
+#      aws_dynamodb_table.cart.arn,
+#      aws_dynamodb_table.orders.arn
+#    ]
+#  }
+# }
+
+#resource "aws_iam_policy" "ddb_policy" {
+#  name   = "${local.name}-ddb-policy"
+#  policy = data.aws_iam_policy_document.ddb_policy.json
+#}
+
+#resource "aws_iam_role_policy_attachment" "ddb_attach" {
+#  role       = aws_iam_role.lambda_role.name
+#  policy_arn = aws_iam_policy.ddb_policy.arn
+#}
+
+# Cart Lambda -> only Cart table
+data "aws_iam_policy_document" "cart_ddb_policy_doc" {
   statement {
-    actions = [
-      "dynamodb:PutItem",
-      "dynamodb:GetItem",
-      "dynamodb:UpdateItem",
-      "dynamodb:DeleteItem",
-      "dynamodb:Query",
-      "dynamodb:Scan"
-    ]
-    resources = [
-      aws_dynamodb_table.cart.arn,
-      aws_dynamodb_table.orders.arn
-    ]
+    actions = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem"]
+    resources = [aws_dynamodb_table.cart.arn]
   }
 }
 
-resource "aws_iam_policy" "ddb_policy" {
-  name   = "${local.name}-ddb-policy"
-  policy = data.aws_iam_policy_document.ddb_policy.json
+resource "aws_iam_policy" "cart_ddb_policy" {
+  name   = "${local.name}-cart-ddb-policy"
+  policy = data.aws_iam_policy_document.cart_ddb_policy_doc.json
 }
 
-resource "aws_iam_role_policy_attachment" "ddb_attach" {
+resource "aws_iam_role_policy_attachment" "cart_ddb_attach" {
   role       = aws_iam_role.lambda_role.name
-  policy_arn = aws_iam_policy.ddb_policy.arn
+  policy_arn = aws_iam_policy.cart_ddb_policy.arn
+}
+
+# Orders Lambda -> only Orders table
+data "aws_iam_policy_document" "orders_ddb_policy_doc" {
+  statement {
+    actions = ["dynamodb:PutItem", "dynamodb:GetItem"]
+    resources = [aws_dynamodb_table.orders.arn]
+  }
+}
+
+resource "aws_iam_policy" "orders_ddb_policy" {
+  name   = "${local.name}-orders-ddb-policy"
+  policy = data.aws_iam_policy_document.orders_ddb_policy_doc.json
+}
+
+resource "aws_iam_role_policy_attachment" "orders_ddb_attach" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.orders_ddb_policy.arn
 }
 
 # -------------------------
@@ -179,6 +221,87 @@ resource "aws_lambda_function" "orders" {
     variables = {
       ORDERS_TABLE = aws_dynamodb_table.orders.name
     }
+  }
+}
+
+# -------------------------
+# CloudWatch Log Groups (retention)
+# -------------------------
+resource "aws_cloudwatch_log_group" "lg_catalog" {
+  name              = "/aws/lambda/${aws_lambda_function.catalog.function_name}"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "lg_cart" {
+  name              = "/aws/lambda/${aws_lambda_function.cart.function_name}"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "lg_orders" {
+  name              = "/aws/lambda/${aws_lambda_function.orders.function_name}"
+  retention_in_days = 7
+}
+
+# -------------------------
+# CloudWatch Alarms (MVP)
+# -------------------------
+resource "aws_cloudwatch_metric_alarm" "lambda_errors_catalog" {
+  alarm_name          = "${local.name}-catalog-errors"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 1
+
+  dimensions = {
+    FunctionName = aws_lambda_function.catalog.function_name
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "lambda_errors_cart" {
+  alarm_name          = "${local.name}-cart-errors"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 1
+
+  dimensions = {
+    FunctionName = aws_lambda_function.cart.function_name
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "lambda_errors_orders" {
+  alarm_name          = "${local.name}-orders-errors"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 1
+
+  dimensions = {
+    FunctionName = aws_lambda_function.orders.function_name
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "lambda_throttles_orders" {
+  alarm_name          = "${local.name}-orders-throttles"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Throttles"
+  namespace           = "AWS/Lambda"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 1
+
+  dimensions = {
+    FunctionName = aws_lambda_function.orders.function_name
   }
 }
 

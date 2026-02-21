@@ -1,0 +1,6 @@
+flowchart LR
+  API[API Gateway] --> CW[CloudWatch Metrics/Logs]
+  L[Lambda Functions] --> CW
+  CW --> AL[CloudWatch Alarms]
+  DDB[DynamoDB] --> CW
+  AL --> Ops[Ops Response / Runbook]
