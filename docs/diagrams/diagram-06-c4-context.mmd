@@ -1,0 +1,9 @@
+flowchart LR
+  Customer[Customer Web/Mobile] --> CF[CloudFront]
+  CF --> S3[S3 Static UI]
+  Customer --> API[API Gateway]
+  API --> Lambda[Lambda Services]
+  Lambda --> DDB[(DynamoDB)]
+  Ops[Ops/Architect] --> CW[CloudWatch + Alarms]
+  Lambda --> CW
+  API --> CW
