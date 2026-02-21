@@ -13,5 +13,8 @@
 - [X] Backend: API Gateway + 3 Lambdas (catalog/cart/orders)
 - [X] DynamoDB tables (on-demand)
 - [X] Frontend integrated with backend (UI demo)
+- [X] Observability: alarms + log retention
+- [X] Security: least privilege
+- [X] FinOps: tags + kill switch + runbook
 - [ ] EventBridge + SQS (optional)
 - [ ] Observability: alarms + log retention
