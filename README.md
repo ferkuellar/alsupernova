@@ -32,6 +32,8 @@ This repo includes **Terraform**, a **working end-to-end UI**, **API endpoints**
 - **Data:** DynamoDB **PAY_PER_REQUEST** (Cart + Orders) → near-zero idle cost
 - Designed to evolve into **event-driven** (fulfillment/notifications/analytics)
 
+📸 **Evidence (screenshots & proof):** [docs/evidence](./docs/evidence)
+
 ---
 
 ## Architecture Overview
