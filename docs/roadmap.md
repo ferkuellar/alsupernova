@@ -16,5 +16,3 @@
 - [X] Observability: alarms + log retention
 - [X] Security: least privilege
 - [X] FinOps: tags + kill switch + runbook
-- [ ] EventBridge + SQS (optional)
-- [ ] Observability: alarms + log retention
