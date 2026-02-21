@@ -6,6 +6,7 @@ crash.log
 *.tfvars
 *.tfvars.json
 .terraform.lock.hcl
+.build/
 
 # Node / frontend
 node_modules/
