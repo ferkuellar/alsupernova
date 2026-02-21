@@ -2,6 +2,14 @@ locals {
   name = var.project
 }
 
+# Read backend module state
+data "terraform_remote_state" "backend" {
+  backend = "local"
+  config = {
+    path = "${path.module}/../backend/terraform.tfstate"
+  }
+}
+
 resource "random_id" "suffix" {
   byte_length = 4
 }

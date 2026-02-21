@@ -18,14 +18,31 @@ def lambda_handler(event, context):
     table = ddb.Table(ORDERS_TABLE)
 
     # GET /orders/{id}
+    
     if method == "GET":
-        order_id = event.get("pathParameters", {}).get("id")
+        order_id = None
+
+        # Preferred: pathParameters (when present)
+        pp = event.get("pathParameters") or {}
+        if isinstance(pp, dict):
+            order_id = pp.get("id")
+
+        # Fallback: rawPath like "/orders/<uuid>"
+        if not order_id:
+            raw_path = event.get("rawPath") or ""
+            parts = [p for p in raw_path.split("/") if p]
+            # expects ["orders", "<uuid>"]
+            if len(parts) >= 2 and parts[0] == "orders":
+                order_id = parts[1]
+
         if not order_id:
             return response(400, {"error": "order id is required in path"})
+
         resp = table.get_item(Key={"orderId": order_id})
         item = resp.get("Item")
         if not item:
             return response(404, {"error": "order not found", "orderId": order_id})
+
         return response(200, {"service": "orders", "order": item})
 
     # POST /orders
